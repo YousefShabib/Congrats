@@ -1,0 +1,78 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidWishCreate() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['senderName', 'message', 'createdAt', 'likes', 'isPinned'])
+        && data.senderName is string
+        && data.senderName.size() > 0
+        && data.senderName.size() <= 100
+        && data.message is string
+        && data.message.size() > 0
+        && data.message.size() <= 1000
+        && data.likes == 0
+        && data.isPinned == false
+        && (!('senderImage' in data) || data.senderImage == null || data.senderImage is string)
+        && (!('mood' in data) || data.mood == null || data.mood in ['happy', 'proud', 'fun', 'emotional']);
+    }
+
+    function graduateIsOpen(graduateId) {
+      return get(/databases/$(database)/documents/graduates/$(graduateId)).data.isOpen == true;
+    }
+
+    match /universities/{universityId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /themes/{themeId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /graduates/{graduateId} {
+      allow read: if true;
+
+      allow create: if request.resource.data.keys().hasAll([
+          'name', 'university', 'major', 'graduationYear', 'profileImage', 'createdAt', 'isOpen'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.university is string
+        && request.resource.data.major is string
+        && request.resource.data.graduationYear is int
+        && request.resource.data.profileImage is string
+        && request.resource.data.isOpen is bool;
+
+      allow update: if true;
+
+      allow delete: if false;
+
+      match /wishes/{wishId} {
+        allow read: if true;
+        allow create: if graduateIsOpen(graduateId) && isValidWishCreate();
+        allow update: if
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+            && request.resource.data.likes == resource.data.likes + 1
+          )
+          || (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned'])
+            && request.resource.data.isPinned is bool
+          );
+        allow delete: if true;
+      }
+
+      match /analytics/{docId} {
+        allow read: if true;
+        allow write: if true;
+      }
+
+      match /ai/{docId} {
+        allow read: if true;
+        allow write: if true;
+      }
+    }
+  }
+}

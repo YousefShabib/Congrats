@@ -1,0 +1,5 @@
+export * from './graduate.repository'
+export * from './wish.repository'
+export * from './analytics.repository'
+export * from './university.repository'
+export * from './storage.repository'

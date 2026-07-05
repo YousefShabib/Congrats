@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isValidImage() {
+      return request.resource != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /graduates/{graduateId}/profile.jpg {
+      allow read: if true;
+      allow write: if isValidImage();
+    }
+
+    match /graduates/{graduateId}/cover.jpg {
+      allow read: if true;
+      allow write: if isValidImage();
+    }
+
+    match /graduates/{graduateId}/wishes/{wishId}/image.jpg {
+      allow read: if true;
+      allow write: if isValidImage();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
